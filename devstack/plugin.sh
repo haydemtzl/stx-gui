@@ -1,4 +1,4 @@
-BDIR=$DEST/stx-gui/devstack/lib
+LIBDIR=$DEST/stx-gui/devstack/lib
 
 source $LIBDIR/starlingx-dashboard.sh
 # check for service enabled
