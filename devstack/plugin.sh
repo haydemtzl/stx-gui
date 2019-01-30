@@ -8,8 +8,8 @@ function install_stx_dashboard {
 }
 
 function configure_stx_dashboard {
-    cp -a ${STX_GUI_DIR}/starlingx-dashboard/starlingx-dashboard/starlingx-dashboard/enabled/* $DEST/horizon/openstack_dashboard/local/enabled
-    cp -a ${STX_GUI_DIR}/starlingx-dashboard/starlingx-dashboard/starlingx-dashboard/local/local_settings.d/_30_stx_local_settings.py $DEST/horizon/openstack_dashboard/local/local_settings.d/
+    cp -a ${STX_GUI_DIR}/starlingx-dashboard/starlingx-dashboard/starlingx_dashboard/enabled/* $DEST/horizon/openstack_dashboard/local/enabled
+    cp -a ${STX_GUI_DIR}/starlingx-dashboard/starlingx-dashboard/starlingx_dashboard/local/local_settings.d/_30_stx_local_settings.py $DEST/horizon/openstack_dashboard/local/local_settings.d/
 }
 
 #check for service enabled
