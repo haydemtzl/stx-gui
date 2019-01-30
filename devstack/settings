@@ -7,3 +7,5 @@
 
 ######### Plugin Specific ##########
 enable_service stx-gui
+
+STX_GUI_DIR=$DEST/stx-gui
