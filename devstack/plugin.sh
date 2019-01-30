@@ -4,7 +4,7 @@
 #
 
 function install_stx_dashboard {
-    setup_develop ${STX_GUI_DIR}
+    setup_develop ${STX_GUI_DIR}/starlingx-dashboard/starlingx-dashboard
 }
 
 function configure_stx_dashboard {
