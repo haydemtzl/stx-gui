@@ -4,7 +4,13 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-from openstack_dashboard.api.neutron import *
+from openstack_dashboard.api.neutron import neutronclient
+from openstack_dashboard.api.neutron import PortForwardingRule
+from openstack_dashboard.api.neutron import ProviderNetwork
+from openstack_dashboard.api.neutron import ProviderNetworkRange
+from openstack_dashboard.api.neutron import ProviderNetworkType
+from openstack_dashboard.api.neutron import ProviderTenantNetwork
+from openstack_dashboard.api.neutron import QoSPolicy
 
 
 def provider_network_type_list(request, **params):
@@ -58,9 +64,9 @@ def provider_network_modify(request, providernet_id, **kwargs):
 
 def provider_network_range_create(request, **kwargs):
     body = {'providernet_range': kwargs}
-    range = neutronclient(request).create_providernet_range(body=body).get(
+    _range = neutronclient(request).create_providernet_range(body=body).get(
         'providernet_range')
-    return ProviderNetworkRange(range)
+    return ProviderNetworkRange(_range)
 
 
 def provider_network_range_list(request, **params):
@@ -71,9 +77,9 @@ def provider_network_range_list(request, **params):
 
 def provider_network_range_get(request, range_id,
                                expand_subnet=True, **params):
-    range = neutronclient(request).show_providernet_range(
+    _range = neutronclient(request).show_providernet_range(
         range_id, **params).get('providernet_range')
-    return ProviderNetworkRange(range)
+    return ProviderNetworkRange(_range)
 
 
 def provider_network_range_delete(request, range_id):
@@ -82,9 +88,9 @@ def provider_network_range_delete(request, range_id):
 
 def provider_network_range_modify(request, range_id, **kwargs):
     body = {'providernet_range': kwargs}
-    range = neutronclient(request).update_providernet_range(
+    _range = neutronclient(request).update_providernet_range(
         range_id, body=body).get('providernet_range')
-    return ProviderNetworkRange(range)
+    return ProviderNetworkRange(_range)
 
 
 def qos_list(request):

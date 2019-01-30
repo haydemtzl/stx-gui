@@ -10,11 +10,12 @@
 #  License for the specific language governing permissions and limitations
 #  under the License.
 #
-# Copyright (c) 2016 Wind River Systems, Inc.
+# Copyright (c) 2016-2018 Wind River Systems, Inc.
 #
 
 import logging
-import urlparse
+
+from six.moves.urllib.parse import urlparse
 
 from openstack_dashboard.api import base
 
@@ -37,12 +38,12 @@ class Client(object):
 
     def create_strategy(
             self, strategy_name, controller_apply_type, storage_apply_type,
-            swift_apply_type, compute_apply_type, max_parallel_compute_hosts,
+            swift_apply_type, worker_apply_type, max_parallel_worker_hosts,
             default_instance_action, alarm_restrictions):
         return sw_update.create_strategy(
             self.token_id, self.url, strategy_name, controller_apply_type,
             storage_apply_type,
-            swift_apply_type, compute_apply_type, max_parallel_compute_hosts,
+            swift_apply_type, worker_apply_type, max_parallel_worker_hosts,
             default_instance_action, alarm_restrictions)
 
     def delete_strategy(self, strategy_name, force):
@@ -59,7 +60,7 @@ class Client(object):
 
 
 def _sw_update_client(request):
-    o = urlparse.urlparse(base.url_for(request, 'nfv'))
+    o = urlparse(base.url_for(request, 'nfv'))
     url = "://".join((o.scheme, o.netloc))
     return Client(url, token_id=request.user.token.id)
 
@@ -71,11 +72,11 @@ def get_strategy(request, strategy_name):
 
 def create_strategy(
         request, strategy_name, controller_apply_type, storage_apply_type,
-        swift_apply_type, compute_apply_type, max_parallel_compute_hosts,
+        swift_apply_type, worker_apply_type, max_parallel_worker_hosts,
         default_instance_action, alarm_restrictions):
     strategy = _sw_update_client(request).create_strategy(
         strategy_name, controller_apply_type, storage_apply_type,
-        swift_apply_type, compute_apply_type, max_parallel_compute_hosts,
+        swift_apply_type, worker_apply_type, max_parallel_worker_hosts,
         default_instance_action, alarm_restrictions)
     return strategy
 

@@ -23,7 +23,6 @@ from horizon import exceptions
 from horizon import forms
 from horizon import messages
 
-from starlingx_dashboard.api import neutron
 from starlingx_dashboard.api import sysinv
 
 LOG = logging.getLogger(__name__)
@@ -280,37 +279,37 @@ class AddInterface(forms.SelfHandlingForm):
                 'data-switch-on': 'ifclass',
                 'data-ifclass-platform': 'Platform Network(s)'}))
 
-    providernetworks_data = MultipleChoiceField(
-        label=_("Provider Network(s)"),
+    datanetworks_data = MultipleChoiceField(
+        label=_("Data Network(s)"),
         required=False,
         widget=CheckboxSelectMultiple(
             attrs={
                 'class': 'switched',
                 'data-switch-on': 'ifclass',
                 'data-ifclass-data': ''},
-            empty_value=_("No provider networks available "
+            empty_value=_("No data networks available "
                           "for this interface class.")))
 
-    providernetworks_pci = MultipleChoiceField(
-        label=_("Provider Network(s)"),
+    datanetworks_pci = MultipleChoiceField(
+        label=_("Data Network(s)"),
         required=False,
         widget=CheckboxSelectMultiple(
             attrs={
                 'class': 'switched',
                 'data-switch-on': 'ifclass',
                 'data-ifclass-pci-passthrough': ''},
-            empty_value=_("No provider networks available "
+            empty_value=_("No data networks available "
                           "for this interface class.")))
 
-    providernetworks_sriov = MultipleChoiceField(
-        label=_("Provider Network(s)"),
+    datanetworks_sriov = MultipleChoiceField(
+        label=_("Data Network(s)"),
         required=False,
         widget=CheckboxSelectMultiple(
             attrs={
                 'class': 'switched',
                 'data-switch-on': 'ifclass',
                 'data-ifclass-pci-sriov': ''},
-            empty_value=_("No provider networks available "
+            empty_value=_("No data networks available "
                           "for this interface class.")))
 
     imtu = forms.IntegerField(
@@ -383,16 +382,12 @@ class AddInterface(forms.SelfHandlingForm):
             current_interface = sysinv.host_interface_get(
                 self.request, this_interface_id)
         else:
-            self.fields['providernetworks_sriov'].widget = \
+            self.fields['datanetworks_sriov'].widget = \
                 forms.widgets.HiddenInput()
-            self.fields['providernetworks_pci'].widget = \
+            self.fields['datanetworks_pci'].widget = \
                 forms.widgets.HiddenInput()
 
         host_uuid = kwargs['initial']['ihost_uuid']
-
-        # Retrieve SDN configuration
-        sdn_enabled = kwargs['initial']['sdn_enabled']
-        sdn_l3_mode = kwargs['initial']['sdn_l3_mode_enabled']
 
         # Populate Address Pool selections
         pools = sysinv.address_pool_list(self.request)
@@ -404,38 +399,38 @@ class AddInterface(forms.SelfHandlingForm):
         network_choices = _get_network_choices(networks)
         self.fields['networks'].choices = network_choices
 
-        # Populate Provider Network Choices by querying Neutron
+        # Populate Data Network Choices by querying SysInv
         self.extras = {}
         interfaces = sysinv.host_interface_list(self.request, host_uuid)
 
-        used_providernets = []
+        used_datanets = []
         for i in interfaces:
             if i.ifclass == 'data' and \
-                    i.providernetworks and \
+                    i.datanetworks_csv and \
                             i.uuid != this_interface_id:
-                used_providernets = used_providernets + \
-                    i.providernetworks.split(",")
+                used_datanets = used_datanets + \
+                    i.datanetworks_csv.split(",")
 
-        providernet_choices = []
-        providernet_filtered = []
+        datanet_choices = []
+        datanet_filtered = []
         if getattr(self.request.user, 'services_region', None) == 'RegionOne' \
                 and getattr(settings, 'DC_MODE', False):
             nt_choices = self.fields['ifclass'].choices
             self.fields['ifclass'].choices = [i for i in nt_choices if
                                               i[0] != 'data']
         else:
-            providernets = neutron.provider_network_list(self.request)
-            for provider in providernets:
-                label = "{} (mtu={})".format(provider.name, provider.mtu)
-                providernet = (str(provider.name), label)
-                providernet_choices.append(providernet)
-                if provider.name not in used_providernets:
-                    providernet_filtered.append(providernet)
+            datanets = sysinv.data_network_list(self.request)
+            for dn in datanets:
+                label = "{} (mtu={})".format(dn.name, dn.mtu)
+                datanet = (str(dn.name), label)
+                datanet_choices.append(datanet)
+                if dn.name not in used_datanets:
+                    datanet_filtered.append(datanet)
 
-        self.fields['providernetworks_data'].choices = providernet_filtered
+        self.fields['datanetworks_data'].choices = datanet_filtered
         if (type(self) is UpdateInterface):
-            self.fields['providernetworks_pci'].choices = providernet_choices
-            self.fields['providernetworks_sriov'].choices = providernet_choices
+            self.fields['datanetworks_pci'].choices = datanet_choices
+            self.fields['datanetworks_sriov'].choices = datanet_choices
 
         if current_interface:
             # update operation
@@ -497,36 +492,35 @@ class AddInterface(forms.SelfHandlingForm):
             cleaned_data.pop('ipv6_pool', None)
 
         if ifclass == 'data':
-            providernetworks = filter(
-                None, cleaned_data.get('providernetworks_data', []))
+            datanetworks = [_f for _f in cleaned_data.get(
+                'datanetworks_data', []) if _f]
         elif ifclass == 'pci-passthrough':
-            providernetworks = filter(None, cleaned_data.get(
-                'providernetworks_pci', []))
+            datanetworks = [_f for _f in cleaned_data.get(
+                'datanetworks_pci', []) if _f]
         elif ifclass == 'pci-sriov':
-            providernetworks = filter(
-                None,
-                cleaned_data.get('providernetworks_sriov', []))
+            datanetworks = [_f for _f in cleaned_data.get(
+                'datanetworks_sriov', []) if _f]
         else:
-            providernetworks = []
+            datanetworks = []
 
-        # providernetwork selection is required for 'data', 'pci-passthrough'
+        # datanetwork selection is required for 'data', 'pci-passthrough'
         # and 'pci-sriov'. It is NOT required for any other interface class
-        if not providernetworks:
+        if not datanetworks:
 
             # Note that 1 of 3 different controls may be used to select
-            # provider network, make sure to set the error on the appropriate
+            # data network, make sure to set the error on the appropriate
             # control
             if ifclass in ['data', 'pci-passthrough', 'pci-sriov']:
                 raise forms.ValidationError(_(
-                    "You must specify a Provider Network"))
+                    "You must specify a Data Network"))
 
-        cleaned_data['providernetworks'] = ",".join(providernetworks)
-        if 'providernetworks_data' in cleaned_data:
-            del cleaned_data['providernetworks_data']
-        if 'providernetworks_pci' in cleaned_data:
-            del cleaned_data['providernetworks_pci']
-        if 'providernetworks_sriov' in cleaned_data:
-            del cleaned_data['providernetworks_sriov']
+        cleaned_data['datanetworks'] = ",".join(datanetworks)
+        if 'datanetworks_data' in cleaned_data:
+            del cleaned_data['datanetworks_data']
+        if 'datanetworks_pci' in cleaned_data:
+            del cleaned_data['datanetworks_pci']
+        if 'datanetworks_sriov' in cleaned_data:
+            del cleaned_data['datanetworks_sriov']
 
         return cleaned_data
 
@@ -543,13 +537,13 @@ class AddInterface(forms.SelfHandlingForm):
                 data['uses'] = uses
                 del data['ports']
 
-            if not data['providernetworks']:
-                del data['providernetworks']
+            if not data['datanetworks']:
+                del data['datanetworks']
 
             if not data['vlan_id'] or data['iftype'] != 'vlan':
                 del data['vlan_id']
             else:
-                data['vlan_id'] = unicode(data['vlan_id'])
+                data['vlan_id'] = str(data['vlan_id'])
 
             network_ids = []
             network_types = []
@@ -564,7 +558,7 @@ class AddInterface(forms.SelfHandlingForm):
                    for network_type in network_types):
                 del data['imtu']
             else:
-                data['imtu'] = unicode(data['imtu'])
+                data['imtu'] = str(data['imtu'])
 
             if data['iftype'] != 'ae':
                 del data['txhashpolicy']
@@ -641,23 +635,19 @@ class UpdateInterface(AddInterface):
         ifclass_val = kwargs['initial']['ifclass']
         host_uuid = kwargs['initial']['ihost_uuid']
 
-        # Get the SDN configuration
-        sdn_enabled = kwargs['initial']['sdn_enabled']
-        sdn_l3_mode = kwargs['initial']['sdn_l3_mode_enabled']
-
         this_interface_id = kwargs['initial']['id']
 
         iftype_val = kwargs['initial']['iftype']
 
-        interface_networks = sysinv.interface_network_list_by_interface(self.request,
-                                                                        this_interface_id)
+        interface_networks = sysinv.interface_network_list_by_interface(
+            self.request, this_interface_id)
         if ifclass_val == 'platform':
             # Load the networks associated with this interface
             network_choices = self.fields['networks'].choices
             network_choice_dict = dict(network_choices)
             initial_networks = []
             for i in interface_networks:
-                for uuid, name in network_choice_dict.items():
+                for uuid in network_choice_dict.keys():
                     if i.network_uuid == uuid:
                         initial_networks.append(uuid)
 
@@ -751,7 +741,8 @@ class UpdateInterface(AddInterface):
         ifclass = cleaned_data.get('ifclass')
         interface_id = cleaned_data.get('id')
         networks = cleaned_data.pop('networks', [])
-        interface_networks = sysinv.interface_network_list_by_interface(self.request, interface_id)
+        interface_networks = sysinv.interface_network_list_by_interface(
+            self.request, interface_id)
         network_ids = []
         networks_to_add = []
         networks_to_remove = []
@@ -774,7 +765,8 @@ class UpdateInterface(AddInterface):
                 interface_networks_to_remove.append(i.uuid)
         cleaned_data['networks'] = network_ids
         cleaned_data['networks_to_add'] = networks_to_add
-        cleaned_data['interface_networks_to_remove'] = interface_networks_to_remove
+        cleaned_data['interface_networks_to_remove'] = \
+            interface_networks_to_remove
         return cleaned_data
 
     def handle(self, request, data):
@@ -798,9 +790,9 @@ class UpdateInterface(AddInterface):
             if not data['vlan_id'] or data['iftype'] != 'vlan':
                 del data['vlan_id']
             else:
-                data['vlan_id'] = unicode(data['vlan_id'])
+                data['vlan_id'] = str(data['vlan_id'])
 
-            data['imtu'] = unicode(data['imtu'])
+            data['imtu'] = str(data['imtu'])
 
             if data['iftype'] != 'ae':
                 del data['txhashpolicy']
@@ -820,13 +812,13 @@ class UpdateInterface(AddInterface):
                             break
 
                 if current_interface.ifclass == 'data':
-                    data['providernetworks'] = 'none'
+                    data['datanetworks'] = 'none'
 
-            if not data['providernetworks']:
-                del data['providernetworks']
+            if not data['datanetworks']:
+                del data['datanetworks']
 
             if 'sriov_numvfs' in data:
-                data['sriov_numvfs'] = unicode(data['sriov_numvfs'])
+                data['sriov_numvfs'] = str(data['sriov_numvfs'])
 
             # Explicitly set iftype when user selects pci-pt or pci-sriov
             ifclass = \
@@ -852,15 +844,16 @@ class UpdateInterface(AddInterface):
                 del data['sriov_numvfs']
 
             if data['networks']:
-                data['networks'] = unicode(",".join(data['networks']))
+                data['networks'] = str(",".join(data['networks']))
             else:
                 del data['networks']
             if data['networks_to_add']:
-                data['networks_to_add'] = unicode(",".join(data['networks_to_add']))
+                data['networks_to_add'] = \
+                    str(",".join(data['networks_to_add']))
             else:
                 del data['networks_to_add']
             if data['interface_networks_to_remove']:
-                data['interface_networks_to_remove'] = unicode(
+                data['interface_networks_to_remove'] = str(
                     ",".join(data['interface_networks_to_remove']))
             else:
                 del data['interface_networks_to_remove']

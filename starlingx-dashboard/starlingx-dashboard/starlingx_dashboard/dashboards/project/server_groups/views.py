@@ -12,7 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 #
-# Copyright (c) 2013-2017 Wind River Systems, Inc.
+# Copyright (c) 2013-2018 Wind River Systems, Inc.
 #
 
 """
@@ -106,7 +106,7 @@ class EditAttachmentsView(tables.DataTableView, forms.ModalFormView):
 
     def get_initial(self):
         try:
-            instances, has_more = api.nova.server_list(self.request)
+            instances, has_more = api.nova.server_list(self.request)  # noqa pylint: disable=unused-variable
         except Exception:
             instances = []
             exceptions.handle(self.request,

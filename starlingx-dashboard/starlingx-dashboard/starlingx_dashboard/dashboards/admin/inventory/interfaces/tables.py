@@ -25,16 +25,16 @@ class DeleteInterface(tables.DeleteAction):
     @staticmethod
     def action_present(count):
         return ungettext_lazy(
-            u"Delete Interface",
-            u"Delete Interfaces",
+            "Delete Interface",
+            "Delete Interfaces",
             count
         )
 
     @staticmethod
     def action_past(count):
         return ungettext_lazy(
-            u"Deleted Interface",
-            u"Deleted Interfaces",
+            "Deleted Interface",
+            "Deleted Interfaces",
             count
         )
 
@@ -91,7 +91,7 @@ class CreateInterface(tables.LinkAction):
             if i.ifclass:
                 count = count + 1
 
-        if host.subfunctions and 'compute' not in host.subfunctions and \
+        if host.subfunctions and 'worker' not in host.subfunctions and \
                 count >= len(INTERFACE_CLASS_TYPES):
             return False
 
@@ -194,8 +194,8 @@ class InterfacesTable(tables.DataTable):
     platform_networks = tables.Column(get_platform_networks,
                                       verbose_name=_('Platform Network(s)'))
 
-    providernetworks = tables.Column('providernetworks',
-                                     verbose_name=_('Provider Network(s)'))
+    datanetworks_csv = tables.Column('datanetworks_csv',
+                                     verbose_name=_('Data Network(s)'))
     attributes = tables.Column(get_attributes,
                                verbose_name=_('Attributes'))
 
@@ -203,7 +203,7 @@ class InterfacesTable(tables.DataTable):
         super(InterfacesTable, self).__init__(*args, **kwargs)
 
     def get_object_id(self, datum):
-        return unicode(datum.uuid)
+        return str(datum.uuid)
 
     def get_object_display(self, datum):
         return datum.ifname

@@ -14,7 +14,8 @@
 #
 
 import logging
-import urlparse
+
+from six.moves.urllib.parse import urlparse
 
 import requests
 
@@ -63,8 +64,8 @@ class Client(object):
         return self._make_request(self.token_id, "GET", self.version,
                                   "query_hosts")
 
-    def upload(self, file):
-        encoder = MultipartEncoder(fields=file)
+    def upload(self, patchfile):
+        encoder = MultipartEncoder(fields=patchfile)
         return self._make_request(self.token_id, "POST", self.version,
                                   "upload", encoder=encoder)
 
@@ -93,7 +94,7 @@ class Client(object):
 
 
 def _patching_client(request):
-    o = urlparse.urlparse(base.url_for(request, 'patching'))
+    o = urlparse(base.url_for(request, 'patching'))
     url = "://".join((o.scheme, o.netloc))
     return Client("v1", url, token_id=request.user.token.id)
 
@@ -205,8 +206,8 @@ def get_message(data):
 
 
 def upload_patch(request, patchfile, name):
-    file = {'file': (name, patchfile,)}
-    resp = _patching_client(request).upload(file)
+    _file = {'file': (name, patchfile,)}
+    resp = _patching_client(request).upload(_file)
     return get_message(resp)
 
 

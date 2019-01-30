@@ -17,8 +17,6 @@ from horizon import exceptions
 from horizon import forms
 from horizon import messages
 
-from openstack_dashboard import api
-
 from starlingx_dashboard import api as stx_api
 
 LOG = logging.getLogger(__name__)
@@ -691,6 +689,12 @@ class UpdateiStorage(forms.SelfHandlingForm):
         help_text=_("Glance image storage space in gibibytes."),
         min_value=0)
 
+    gnocchi = forms.IntegerField(
+        label=_("Gnocchi Storage (GiB)"),
+        required=True,
+        help_text=_("Gnocchi storage space in gibibytes."),
+        min_value=0)
+
     backup = forms.IntegerField(
         label=_("Backup Storage (GiB)"),
         required=True,
@@ -814,6 +818,13 @@ class UpdateiStoragePools(forms.SelfHandlingForm):
             min_value=0,
             widget=forms.NumberInput(attrs=js_attrs))
 
+        self.fields['kube_pool_gib'] = forms.IntegerField(
+            label=_("Kubernetes Pool (GiB)"),
+            required=True,
+            help_text=_("Storage space allocated to Kubernetes in gibibytes."),
+            min_value=0,
+            widget=forms.NumberInput(attrs=js_attrs))
+
         if self._tier_name == 'storage':
             self.fields['glance_pool_gib'] = forms.IntegerField(
                 label=_("Glance Image Pool (GiB)"),
@@ -864,19 +875,22 @@ class UpdateiStoragePools(forms.SelfHandlingForm):
                     STORAGE_VALUES = {}
                     if hasattr(storage_config, 'cinder_pool_gib'):
                         STORAGE_VALUES['cinder_pool_gib'] = \
-                            unicode(storage_config._cinder_pool_gib)
+                            str(storage_config._cinder_pool_gib)
+                    if hasattr(storage_config, 'kube_pool_gib'):
+                        STORAGE_VALUES['kube_pool_gib'] = \
+                            str(storage_config._kube_pool_gib)
                     if hasattr(storage_config, 'glance_pool_gib'):
                         STORAGE_VALUES['glance_pool_gib'] = \
-                            unicode(storage_config._glance_pool_gib)
+                            str(storage_config._glance_pool_gib)
                     if hasattr(storage_config, 'ephemeral_pool_gib'):
                         STORAGE_VALUES['ephemeral_pool_gib'] = \
-                            unicode(storage_config._ephemeral_pool_gib)
+                            str(storage_config._ephemeral_pool_gib)
                     if hasattr(storage_config, 'object_pool_gib'):
                         STORAGE_VALUES['object_pool_gib'] = \
-                            unicode(storage_config._object_pool_gib)
+                            str(storage_config._object_pool_gib)
 
                     for key in data.keys():
-                        data[key] = unicode(data[key])
+                        data[key] = str(data[key])
 
                     LOG.info("initial send_to_sysinv=%s", send_to_sysinv)
                     if len(STORAGE_VALUES) != len(data):
@@ -891,6 +905,7 @@ class UpdateiStoragePools(forms.SelfHandlingForm):
             else:
                 storage_config_uuid = ' '
                 data = {'cinder_pool_gib': '',
+                        'kube_pool_gib': '',
                         'glance_pool_gib': '',
                         'ephemeral_pool_gib': '',
                         'object_pool_gib': ''}
@@ -898,9 +913,8 @@ class UpdateiStoragePools(forms.SelfHandlingForm):
             LOG.debug(data)
 
             if send_to_sysinv:
-                my_storage = stx_api.sysinv.storpool_update(request,
-                                                            storage_config_uuid,
-                                                            **data)
+                my_storage = stx_api.sysinv.storpool_update(
+                    request, storage_config_uuid, **data)
 
                 if my_storage:
                     msg = _(

@@ -6,7 +6,6 @@
 
 import logging
 
-from django.core.urlresolvers import reverse  # noqa
 from django.core.urlresolvers import reverse_lazy
 from django.utils.translation import ugettext_lazy as _
 
@@ -14,8 +13,6 @@ from horizon import exceptions
 from horizon import forms
 from horizon import tables
 from horizon import tabs
-
-from openstack_dashboard import api
 
 from starlingx_dashboard import api as stx_api
 from starlingx_dashboard.dashboards.admin.system_config.forms \
@@ -327,6 +324,8 @@ class UpdateiStoragePoolsView(forms.ModalFormView):
                 # check before adding each value in case it is None
                 if s.cinder_pool_gib:
                     ctxt['configured_quota'] += s.cinder_pool_gib
+                if s.kube_pool_gib:
+                    ctxt['configured_quota'] += s.kube_pool_gib
                 if s.glance_pool_gib:
                     ctxt['configured_quota'] += s.glance_pool_gib
                 if s.ephemeral_pool_gib:
@@ -341,6 +340,7 @@ class UpdateiStoragePoolsView(forms.ModalFormView):
         form_data = {'uuid': ' ',
                      'tier_name': None,
                      'cinder_pool_gib': None,
+                     'kube_pool_gib': None,
                      'glance_pool_gib': None,
                      'ephemeral_pool_gib': None,
                      'object_pool_gib': None}
@@ -361,6 +361,9 @@ class UpdateiStoragePoolsView(forms.ModalFormView):
 
                     if 'cinder_pool_gib' in storage_attrs:
                         form_data['cinder_pool_gib'] = s.cinder_pool_gib
+
+                    if 'kube_pool_gib' in storage_attrs:
+                        form_data['kube_pool_gib'] = s.kube_pool_gib
 
                     if 'glance_pool_gib' in storage_attrs:
                         form_data['glance_pool_gib'] = s.glance_pool_gib
@@ -432,8 +435,8 @@ class UpdateSDNControllerView(forms.ModalFormView):
         if not hasattr(self, "_object"):
             controller_uuid = self.kwargs['uuid']
             try:
-                self._object = stx_api.sysinv.sdn_controller_get(self.request,
-                                                                 controller_uuid)
+                self._object = stx_api.sysinv.sdn_controller_get(
+                    self.request, controller_uuid)
             except Exception:
                 redirect = self.success_url
                 msg = _('Unable to retrieve SDN controller details.')

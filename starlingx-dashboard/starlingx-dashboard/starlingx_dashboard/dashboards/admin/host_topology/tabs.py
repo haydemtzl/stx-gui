@@ -1,4 +1,4 @@
-# Copyright (c) 2016-2018 Wind River Systems, Inc.
+# Copyright (c) 2016-2019 Wind River Systems, Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -15,12 +15,12 @@ from horizon import tabs
 from openstack_dashboard import api as api
 
 from starlingx_dashboard import api as stx_api
+from starlingx_dashboard.dashboards.admin.datanets.datanets import \
+    tables as pn_tables
 from starlingx_dashboard.dashboards.admin.host_topology import \
     tables as tables
 from starlingx_dashboard.dashboards.admin.inventory import \
     tabs as i_tabs
-from starlingx_dashboard.dashboards.admin.providernets.providernets import \
-    tables as pn_tables
 
 LOG = logging.getLogger(__name__)
 
@@ -28,9 +28,9 @@ LOG = logging.getLogger(__name__)
 def get_alarms_for_entity(alarms, entity_str):
     matched = []
     for alarm in alarms:
-        for id in alarm.entity_instance_id.split('.'):
+        for _id in alarm.entity_instance_id.split('.'):
             try:
-                if entity_str == id.split('=')[1]:
+                if entity_str == _id.split('=')[1]:
                     matched.append(alarm)
             except Exception:
                 # malformed entity_instance_id
@@ -66,14 +66,14 @@ class OverviewTab(tabs.TableTab):
     table_classes = (tables.ProviderNetworkRangeTable,
                      pn_tables.ProviderNetworkTenantNetworkTable)
     template_name = 'admin/host_topology/detail/providernet.html'
-    name = "Provider Network Detail"
+    name = "Data Network Detail"
     slug = 'providernet_details_overview'
     failure_url = reverse_lazy('horizon:admin:host_topology:index')
 
     def _get_tenant_list(self):
         if not hasattr(self, "_tenants"):
             try:
-                tenants, has_more = api.keystone.tenant_list(self.request)
+                tenants, has_more = api.keystone.tenant_list(self.request)  # noqa pylint: disable=unused-variable
             except Exception:
                 tenants = []
                 msg = _('Unable to retrieve instance project information.')
@@ -83,14 +83,8 @@ class OverviewTab(tabs.TableTab):
         return self._tenants
 
     def get_tenant_networks_data(self):
-        try:
-            providernet_id = self.tab_group.kwargs['providernet_id']
-            networks = stx_api.neutron.provider_network_list_tenant_networks(
-                self.request, providernet_id=providernet_id)
-        except Exception:
-            networks = []
-            msg = _('Tenant network list can not be retrieved.')
-            exceptions.handle(self.request, msg)
+        # TODO(datanetworks): need to refactor for Stein
+        networks = []
         return networks
 
     def get_provider_network_ranges_data(self):

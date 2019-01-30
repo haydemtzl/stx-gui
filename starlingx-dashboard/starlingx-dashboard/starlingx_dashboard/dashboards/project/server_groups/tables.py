@@ -12,7 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 #
-# Copyright (c) 2013-2017 Wind River Systems, Inc.
+# Copyright (c) 2013-2018 Wind River Systems, Inc.
 #
 
 from django.core.urlresolvers import NoReverseMatch
@@ -27,7 +27,6 @@ from horizon import exceptions
 from horizon import tables
 
 from openstack_dashboard import api
-from openstack_dashboard.api import nova
 from openstack_dashboard.dashboards.project.volumes.tables \
     import get_attachment_name
 from openstack_dashboard.usage import quotas
@@ -40,21 +39,20 @@ DELETABLE_STATES = ("available", "error")
 class DeleteServerGroup(tables.DeleteAction):
     data_type_singular = _("Server Group")
     data_type_plural = _("Server Groups")
-    action_past = _("Scheduled deletion of")
 
     @staticmethod
     def action_present(count):
         return ungettext_lazy(
-            u"Delete Server Group",
-            u"Delete Server Groups",
+            "Delete Server Group",
+            "Delete Server Groups",
             count
         )
 
     @staticmethod
     def action_past(count):
         return ungettext_lazy(
-            u"Deleted Server Group",
-            u"Deleted Server Groups",
+            "Deleted Server Group",
+            "Deleted Server Groups",
             count
         )
 
@@ -214,8 +212,6 @@ class ServerGroupsTable(tables.DataTable):
 
 class DetachServerGroup(tables.BatchAction):
     name = "detach"
-    action_present = _("Detach")
-    action_past = _("Detaching")  # This action is asynchronous.
     data_type_singular = _("Server Group")
     data_type_plural = _("Server Groups")
     classes = ('btn-danger', 'btn-detach')
@@ -223,16 +219,16 @@ class DetachServerGroup(tables.BatchAction):
     @staticmethod
     def action_present(count):
         return ungettext_lazy(
-            u"Server Group",
-            u"Server Groups",
+            "Server Group",
+            "Server Groups",
             count
         )
 
     @staticmethod
     def action_past(count):
         return ungettext_lazy(
-            u"Deleted Group",
-            u"Deleted Groups",
+            "Deleted Group",
+            "Deleted Groups",
             count
         )
 

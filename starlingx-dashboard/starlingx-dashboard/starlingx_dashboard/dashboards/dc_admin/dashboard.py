@@ -10,7 +10,7 @@ from django.utils.translation import ugettext_lazy as _
 import horizon
 
 # Load the api rest services into Horizon
-import starlingx_dashboard.api.rest  # noqa
+import starlingx_dashboard.api.rest  # noqa: F401 pylint: disable=unused-import
 
 
 class DCAdmin(horizon.Dashboard):
@@ -29,5 +29,6 @@ class DCAdmin(horizon.Dashboard):
             return False
 
         return super(DCAdmin, self).allowed(context)
+
 
 horizon.register(DCAdmin)

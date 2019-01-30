@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2013-2016 Wind River Systems, Inc.
+# Copyright (c) 2013-2018 Wind River Systems, Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -34,16 +34,16 @@ class ApplyPatch(tables.BatchAction):
     @staticmethod
     def action_present(count):
         return ungettext_lazy(
-            u"Apply Patch",
-            u"Apply Patches",
+            "Apply Patch",
+            "Apply Patches",
             count
         )
 
     @staticmethod
     def action_past(count):
         return ungettext_lazy(
-            u"Applied Patch",
-            u"Applied Patches",
+            "Applied Patch",
+            "Applied Patches",
             count
         )
 
@@ -57,7 +57,7 @@ class ApplyPatch(tables.BatchAction):
             result = stx_api.patch.patch_apply_req(request, obj_ids)
             messages.success(request, result)
         except Exception as ex:
-            messages.error(request, ex.message)
+            messages.error(request, str(ex))
 
 
 class RemovePatch(tables.BatchAction):
@@ -67,16 +67,16 @@ class RemovePatch(tables.BatchAction):
     @staticmethod
     def action_present(count):
         return ungettext_lazy(
-            u"Remove Patch",
-            u"Remove Patches",
+            "Remove Patch",
+            "Remove Patches",
             count
         )
 
     @staticmethod
     def action_past(count):
         return ungettext_lazy(
-            u"Removed Patch",
-            u"Removed Patches",
+            "Removed Patch",
+            "Removed Patches",
             count
         )
 
@@ -97,7 +97,7 @@ class RemovePatch(tables.BatchAction):
             result = stx_api.patch.patch_remove_req(request, obj_ids)
             messages.success(request, result)
         except Exception as ex:
-            messages.error(request, ex.message)
+            messages.error(request, str(ex))
 
 
 class DeletePatch(tables.BatchAction):
@@ -108,16 +108,16 @@ class DeletePatch(tables.BatchAction):
     @staticmethod
     def action_present(count):
         return ungettext_lazy(
-            u"Delete Patch",
-            u"Delete Patches",
+            "Delete Patch",
+            "Delete Patches",
             count
         )
 
     @staticmethod
     def action_past(count):
         return ungettext_lazy(
-            u"Deleted Patch",
-            u"Deleted Patches",
+            "Deleted Patch",
+            "Deleted Patches",
             count
         )
 
@@ -131,7 +131,7 @@ class DeletePatch(tables.BatchAction):
             result = stx_api.patch.patch_delete_req(request, obj_ids)
             messages.success(request, result)
         except Exception as ex:
-            messages.error(request, ex.message)
+            messages.error(request, str(ex))
 
 
 class UpdatePatchRow(tables.Row):
@@ -152,7 +152,7 @@ class PatchFilterAction(tables.FilterAction):
                 return True
             return False
 
-        return filter(comp, patches)
+        return list(filter(comp, patches))
 
 
 class PatchesTable(tables.DataTable):
@@ -223,7 +223,8 @@ class CreateStrategy(tables.LinkAction):
     def allowed(self, request, datum):
         try:
             # Only a single strategy (patch or upgrade) can exist at a time.
-            strategy = get_cached_strategy(request, stx_api.vim.STRATEGY_SW_PATCH,
+            strategy = get_cached_strategy(request,
+                                           stx_api.vim.STRATEGY_SW_PATCH,
                                            self.table)
             if not strategy:
                 strategy = get_cached_strategy(request,
@@ -290,7 +291,7 @@ class DeleteStrategy(tables.Action):
                 messages.error(request, "Strategy delete failed")
         except Exception as ex:
             LOG.exception(ex)
-            messages.error(request, ex.message)
+            messages.error(request, str(ex))
 
 
 class DeletePatchStrategy(DeleteStrategy):
@@ -338,7 +339,7 @@ class ApplyStrategy(tables.Action):
                 messages.error(request, "Strategy apply failed")
         except Exception as ex:
             LOG.exception(ex)
-            messages.error(request, ex.message)
+            messages.error(request, str(ex))
 
 
 class ApplyPatchStrategy(ApplyStrategy):
@@ -387,7 +388,7 @@ class AbortStrategy(tables.Action):
                 messages.error(request, "Strategy abort failed")
         except Exception as ex:
             LOG.exception(ex)
-            messages.error(request, ex.message)
+            messages.error(request, str(ex))
 
 
 class AbortPatchStrategy(AbortStrategy):
@@ -404,16 +405,16 @@ class ApplyStage(tables.BatchAction):
     @staticmethod
     def action_present(count):
         return ungettext_lazy(
-            u"Apply Stage",
-            u"Apply Stages",
+            "Apply Stage",
+            "Apply Stages",
             count
         )
 
     @staticmethod
     def action_past(count):
         return ungettext_lazy(
-            u"Applied Stage",
-            u"Applied Stages",
+            "Applied Stage",
+            "Applied Stages",
             count
         )
 
@@ -442,7 +443,8 @@ class ApplyStage(tables.BatchAction):
         for obj_id in obj_ids:
             try:
                 stage_id = obj_id.split('-', 1)[1]
-                result = stx_api.vim.apply_strategy(request, self.strategy_name,
+                result = stx_api.vim.apply_strategy(request,
+                                                    self.strategy_name,
                                                     stage_id)
                 if result is None:
                     messages.error(request, "Strategy stage %s apply failed" %
@@ -453,7 +455,7 @@ class ApplyStage(tables.BatchAction):
                                      stage_id)
             except Exception as ex:
                 LOG.exception(ex)
-                messages.error(request, ex.message)
+                messages.error(request, str(ex))
 
 
 class ApplyPatchStage(ApplyStage):
@@ -473,16 +475,16 @@ class AbortStage(tables.BatchAction):
     @staticmethod
     def action_present(count):
         return ungettext_lazy(
-            u"Abort Stage",
-            u"Abort Stages",
+            "Abort Stage",
+            "Abort Stages",
             count
         )
 
     @staticmethod
     def action_past(count):
         return ungettext_lazy(
-            u"Aborted Stage",
-            u"Aborted Stages",
+            "Aborted Stage",
+            "Aborted Stages",
             count
         )
 
@@ -503,7 +505,8 @@ class AbortStage(tables.BatchAction):
         for obj_id in obj_ids:
             try:
                 stage_id = obj_id.split('-', 1)[1]
-                result = stx_api.vim.abort_strategy(request, self.strategy_name,
+                result = stx_api.vim.abort_strategy(request,
+                                                    self.strategy_name,
                                                     stage_id)
                 if result is None:
                     messages.error(request,
@@ -514,7 +517,7 @@ class AbortStage(tables.BatchAction):
                                      stage_id)
             except Exception as ex:
                 LOG.exception(ex)
-                messages.error(request, ex.message)
+                messages.error(request, str(ex))
 
 
 class AbortPatchStage(AbortStage):
@@ -598,7 +601,10 @@ class UpdateStageRow(tables.Row):
     def get_data(self, request, row_id):
         phase = row_id.split('-', 1)[0]
         stage_id = row_id.split('-', 1)[1]
-        stage = stx_api.vim.get_stage(request, self.strategy_name, phase, stage_id)
+        stage = stx_api.vim.get_stage(request,
+                                      self.strategy_name,
+                                      phase,
+                                      stage_id)
         return stage
 
 

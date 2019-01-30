@@ -12,7 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 #
-# Copyright (c) 2013-2017 Wind River Systems, Inc.
+# Copyright (c) 2013-2018 Wind River Systems, Inc.
 #
 
 from django.utils.translation import ugettext_lazy as _  # noqa
@@ -30,13 +30,13 @@ class ServerGroups(horizon.Panel):
     permissions = ('openstack.services.platform',)
 
     def allowed(self, context):
-        if not base.is_service_enabled(context['request'], 'platform'):
+        if not base.is_service_enabled(context['request'], 'compute'):
             return False
         else:
             return super(ServerGroups, self).allowed(context)
 
     def nav(self, context):
-        if not base.is_service_enabled(context['request'], 'platform'):
+        if not base.is_service_enabled(context['request'], 'compute'):
             return False
         else:
             return True

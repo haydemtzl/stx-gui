@@ -1,6 +1,4 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-# Copyright (c) 2015 Wind River Systems, Inc.
+# Copyright (c) 2015-2018 Wind River Systems, Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -26,7 +24,7 @@ class EditView(forms.ModalFormView):
     success_url = 'horizon:admin:inventory:localvolumegroupdetail'
 
     def get_form(self, form_class):
-        self.form = super(self.__class__, self).get_form(form_class)
+        self.form = super(EditView, self).get_form(form_class)
         return self.form
 
     def get_context_data(self, **kwargs):

@@ -7,7 +7,7 @@
 import logging
 
 from django.core.urlresolvers import reverse  # noqa
-from django.template.defaultfilters import safe, title  # noqa
+from django.template.defaultfilters import safe
 from django.utils.translation import ugettext_lazy as _
 from django.utils.translation import ungettext_lazy
 
@@ -115,7 +115,7 @@ class DeleteCloudPatchStrategy(tables.Action):
                 messages.error(request, "Strategy delete failed")
         except Exception as ex:
             LOG.exception(ex)
-            messages.error(request, ex.message)
+            messages.error(request, str(ex))
 
 
 class ApplyCloudPatchStrategy(tables.Action):
@@ -151,7 +151,7 @@ class ApplyCloudPatchStrategy(tables.Action):
                 messages.error(request, "Strategy apply failed")
         except Exception as ex:
             LOG.exception(ex)
-            messages.error(request, ex.message)
+            messages.error(request, str(ex))
 
 
 class AbortCloudPatchStrategy(tables.Action):
@@ -190,7 +190,7 @@ class AbortCloudPatchStrategy(tables.Action):
                 messages.error(request, "Strategy abort failed")
         except Exception as ex:
             LOG.exception(ex)
-            messages.error(request, ex.message)
+            messages.error(request, str(ex))
 
 
 STEP_STATE_CHOICES = (
@@ -271,16 +271,16 @@ class DeleteCloudPatchConfig(tables.DeleteAction):
     @staticmethod
     def action_present(count):
         return ungettext_lazy(
-            u"Delete Cloud Patching Configuration",
-            u"Delete Cloud Patching Configurations",
+            "Delete Cloud Patching Configuration",
+            "Delete Cloud Patching Configurations",
             count
         )
 
     @staticmethod
     def action_past(count):
         return ungettext_lazy(
-            u"Deleted Cloud Patching Configuration",
-            u"Deleted Cloud Patching Configurations",
+            "Deleted Cloud Patching Configuration",
+            "Deleted Cloud Patching Configurations",
             count
         )
 
@@ -303,10 +303,10 @@ class CloudPatchConfigTable(tables.DataTable):
     cloud = tables.Column('cloud', verbose_name=_('Cloud'))
     storage_apply_type = tables.Column('storage_apply_type',
                                        verbose_name=_('Storage Apply Type'))
-    compute_apply_type = tables.Column('compute_apply_type',
-                                       verbose_name=_('Compute Apply Type'))
-    max_parallel_computes = tables.Column(
-        'max_parallel_computes', verbose_name=_('Max Parallel Computes'))
+    worker_apply_type = tables.Column('worker_apply_type',
+                                      verbose_name=_('Worker Apply Type'))
+    max_parallel_workers = tables.Column(
+        'max_parallel_workers', verbose_name=_('Max Parallel Workers'))
     default_instance_action = tables.Column(
         'default_instance_action', verbose_name=_('Default Instance Action'))
     alarm_restriction_type = tables.Column(

@@ -177,10 +177,6 @@ class AddDiskProfileView(forms.ModalFormView):
                         sysinv.LVG_NOVA_PARAM_BACKING)
                     l.concurrent_disk_operations = l.capabilities.get(
                         sysinv.LVG_NOVA_PARAM_DISK_OPS)
-                    if (l.instance_backing and
-                       l.instance_backing == sysinv.LVG_NOVA_BACKING_LVM):
-                        l.instances_lv_size_gib = float(l.capabilities.get(
-                            sysinv.LVG_NOVA_PARAM_INSTANCES_SIZE_MIB)) / 1024
 
                     l.lvm_type = l.capabilities.get(
                         sysinv.LVG_CINDER_PARAM_LVM_TYPE)
@@ -205,6 +201,8 @@ class AddDiskProfileView(forms.ModalFormView):
         context = super(AddDiskProfileView, self).get_context_data(**kwargs)
         context['host_id'] = self.kwargs['host_id']
         context['host'] = self.get_myhost_data()
+        context['is_host_with_storage'] = sysinv.is_host_with_storage(
+            self.request, self.kwargs['host_id'])
         return context
 
     def get_initial(self):

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2013-2017 Wind River Systems, Inc.
+# Copyright (c) 2013-2018 Wind River Systems, Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -11,13 +11,14 @@ import logging
 from django.core.urlresolvers import reverse  # noqa
 from django import shortcuts
 from django import template
-from django.template.defaultfilters import safe, timesince  # noqa
+from django.template.defaultfilters import safe  # noqa
 from django.utils.translation import ugettext_lazy as _
 from django.utils.translation import ungettext_lazy
 
 from horizon import exceptions
 from horizon import messages
 from horizon import tables
+from horizon.utils import filters
 from horizon.utils import functions
 
 from starlingx_dashboard import api as stx_api
@@ -134,16 +135,16 @@ class DeleteHost(tables.DeleteAction):
     @staticmethod
     def action_present(count):
         return ungettext_lazy(
-            u"Delete Host",
-            u"Delete Hosts",
+            "Delete Host",
+            "Delete Hosts",
             count
         )
 
     @staticmethod
     def action_past(count):
         return ungettext_lazy(
-            u"Deleted Host",
-            u"Deleted Hosts",
+            "Deleted Host",
+            "Deleted Hosts",
             count
         )
 
@@ -164,16 +165,16 @@ class LockHost(tables.BatchAction):
     @staticmethod
     def action_present(count):
         return ungettext_lazy(
-            u"Lock Host",
-            u"Lock Hosts",
+            "Lock Host",
+            "Lock Hosts",
             count
         )
 
     @staticmethod
     def action_past(count):
         return ungettext_lazy(
-            u"Locking Host",
-            u"Locking Hosts",
+            "Locking Host",
+            "Locking Hosts",
             count
         )
 
@@ -197,16 +198,16 @@ class ForceLockHost(tables.BatchAction):
     @staticmethod
     def action_present(count):
         return ungettext_lazy(
-            u"Force Lock Host",
-            u"Force Lock Hosts",
+            "Force Lock Host",
+            "Force Lock Hosts",
             count
         )
 
     @staticmethod
     def action_past(count):
         return ungettext_lazy(
-            u"Forced Lock Host",
-            u"Forced Lock Hosts",
+            "Forced Lock Host",
+            "Forced Lock Hosts",
             count
         )
 
@@ -231,10 +232,10 @@ class ForceLockHost(tables.BatchAction):
                 "unsuccessful and this host MUST be locked.\n\n"
                 "If you proceed, then this action will be logged"
                 " and cannot be undone.") % datum.hostname
-        elif datum._personality == stx_api.sysinv.PERSONALITY_COMPUTE:
+        elif datum._personality == stx_api.sysinv.PERSONALITY_WORKER:
             return _(
                 "<b>WARNING</b>: This will cause a service OUTAGE"
-                " for all VMs currently using resources on '%s'.\n\n"
+                " for all Applications currently using resources on '%s'.\n\n"
                 "To avoid service outages, click 'Cancel' and use"
                 " 'Lock Host' to gracefully migrate "
                 "resources away from this host. "
@@ -264,16 +265,16 @@ class UnlockHost(tables.BatchAction):
     @staticmethod
     def action_present(count):
         return ungettext_lazy(
-            u"Unlock Host",
-            u"Unlock Hosts",
+            "Unlock Host",
+            "Unlock Hosts",
             count
         )
 
     @staticmethod
     def action_past(count):
         return ungettext_lazy(
-            u"Unlocked Host",
-            u"Unlocked Hosts",
+            "Unlocked Host",
+            "Unlocked Hosts",
             count
         )
 
@@ -298,16 +299,16 @@ class ForceUnlockHost(tables.BatchAction):
     @staticmethod
     def action_present(count):
         return ungettext_lazy(
-            u"Force Unlock Host",
-            u"Force Unlock Hosts",
+            "Force Unlock Host",
+            "Force Unlock Hosts",
             count
         )
 
     @staticmethod
     def action_past(count):
         return ungettext_lazy(
-            u"Forced Unlock Host",
-            u"Forced Unlock Hosts",
+            "Forced Unlock Host",
+            "Forced Unlock Hosts",
             count
         )
 
@@ -337,16 +338,16 @@ class PowerOnHost(tables.BatchAction):
     @staticmethod
     def action_present(count):
         return ungettext_lazy(
-            u"Power On Host",
-            u"Power On Hosts",
+            "Power On Host",
+            "Power On Hosts",
             count
         )
 
     @staticmethod
     def action_past(count):
         return ungettext_lazy(
-            u"Powered On Host",
-            u"Powered On Hosts",
+            "Powered On Host",
+            "Powered On Hosts",
             count
         )
 
@@ -368,16 +369,16 @@ class PowerOffHost(tables.BatchAction):
     @staticmethod
     def action_present(count):
         return ungettext_lazy(
-            u"Power Off Host",
-            u"Power Off Hosts",
+            "Power Off Host",
+            "Power Off Hosts",
             count
         )
 
     @staticmethod
     def action_past(count):
         return ungettext_lazy(
-            u"Powered Off Host",
-            u"Powered Off Hosts",
+            "Powered Off Host",
+            "Powered Off Hosts",
             count
         )
 
@@ -400,16 +401,16 @@ class ResetHost(tables.BatchAction):
     @staticmethod
     def action_present(count):
         return ungettext_lazy(
-            u"Reset Host",
-            u"Reset Hosts",
+            "Reset Host",
+            "Reset Hosts",
             count
         )
 
     @staticmethod
     def action_past(count):
         return ungettext_lazy(
-            u"Reset Host",
-            u"Reset Hosts",
+            "Reset Host",
+            "Reset Hosts",
             count
         )
 
@@ -431,16 +432,16 @@ class RebootHost(tables.BatchAction):
     @staticmethod
     def action_present(count):
         return ungettext_lazy(
-            u"Reboot Host",
-            u"Reboot Hosts",
+            "Reboot Host",
+            "Reboot Hosts",
             count
         )
 
     @staticmethod
     def action_past(count):
         return ungettext_lazy(
-            u"Rebooted Host",
-            u"Rebooted Hosts",
+            "Rebooted Host",
+            "Rebooted Hosts",
             count
         )
 
@@ -461,16 +462,16 @@ class ReinstallHost(tables.BatchAction):
     @staticmethod
     def action_present(count):
         return ungettext_lazy(
-            u"Reinstall Host",
-            u"Reinstall Hosts",
+            "Reinstall Host",
+            "Reinstall Hosts",
             count
         )
 
     @staticmethod
     def action_past(count):
         return ungettext_lazy(
-            u"Reinstalled Host",
-            u"Reinstalled Hosts",
+            "Reinstalled Host",
+            "Reinstalled Hosts",
             count
         )
 
@@ -491,16 +492,16 @@ class SwactHost(tables.BatchAction):
     @staticmethod
     def action_present(count):
         return ungettext_lazy(
-            u"Swact Host",
-            u"Swact Hosts",
+            "Swact Host",
+            "Swact Hosts",
             count
         )
 
     @staticmethod
     def action_past(count):
         return ungettext_lazy(
-            u"Swact Initiated Host",
-            u"Swact Initiated Hosts",
+            "Swact Initiated Host",
+            "Swact Initiated Hosts",
             count
         )
 
@@ -521,16 +522,16 @@ class PatchInstallAsync(tables.BatchAction):
     @staticmethod
     def action_present(count):
         return ungettext_lazy(
-            u"Install Patch",
-            u"Install Patches",
+            "Install Patch",
+            "Install Patches",
             count
         )
 
     @staticmethod
     def action_past(count):
         return ungettext_lazy(
-            u"Installed Patch",
-            u"Installed Patches",
+            "Installed Patch",
+            "Installed Patches",
             count
         )
 
@@ -590,10 +591,10 @@ class HostsStorageFilterAction(tables.FilterAction):
                 return True
             return False
 
-        return filter(comp, hosts)
+        return list(filter(comp, hosts))
 
 
-class HostsComputeFilterAction(tables.FilterAction):
+class HostsWorkerFilterAction(tables.FilterAction):
     def filter(self, table, hosts, filter_string):
         """Naive case-insensitive search."""
         q = filter_string.lower()
@@ -664,7 +665,7 @@ def get_task_or_status(host):
         patch_current = "Not Patch Current"
 
     if host._patch_state != patch_constants.PATCH_AGENT_STATE_IDLE:
-        patch_state = unicode(host.patch_state)
+        patch_state = str(host.patch_state)
         if host._patch_state == patch_constants.PATCH_AGENT_STATE_INSTALLING:
             # Clear the other patch status fields
             patch_current = ""
@@ -675,10 +676,10 @@ def get_task_or_status(host):
         patch_state = ""
 
     return _("%s") % "<br />".join(
-        filter(None, [task_or_status,
-                      patch_current,
-                      reboot_required,
-                      patch_state]))
+        [_f for _f in [task_or_status,
+                       patch_current,
+                       reboot_required,
+                       patch_state] if _f])
 
 
 TASK_STATE_CHOICES = (
@@ -687,7 +688,7 @@ TASK_STATE_CHOICES = (
     ("none", True),
     ("Install Failed", False),
     ("Config out-of-date", False),
-    ("Compute config required", False),
+    ("Worker config required", False),
     ("Reinstall required", False),
     ("Config out-of-date<br />Not Patch Current<br />Reboot Required",
      False),
@@ -720,17 +721,20 @@ class Hosts(tables.DataTable):
         display_choices=stx_api.sysinv.Host.PERSONALITY_DISPLAY_CHOICES)
     admin = tables.Column("administrative",
                           verbose_name=_("Admin State"),
-                          display_choices=stx_api.sysinv.Host.ADMIN_DISPLAY_CHOICES)
+                          display_choices=stx_api.sysinv.
+                          Host.ADMIN_DISPLAY_CHOICES)
     oper = tables.Column("operational",
                          verbose_name=_("Operational State"),
-                         display_choices=stx_api.sysinv.Host.OPER_DISPLAY_CHOICES)
+                         display_choices=stx_api.sysinv.
+                         Host.OPER_DISPLAY_CHOICES)
     avail = tables.Column("availability",
                           verbose_name=_("Availability State"),
-                          display_choices=stx_api.sysinv.Host.AVAIL_DISPLAY_CHOICES)
+                          display_choices=stx_api.sysinv.
+                          Host.AVAIL_DISPLAY_CHOICES)
     uptime = tables.Column('boottime',
-                           verbose_name=_('Uptime'),
-                           filters=(timesince,),
-                           attrs={'data-type': "uptime"})
+                           verbose_name=_("Uptime"),
+                           filters=(filters.timesince_sortable,),
+                           attrs={'data-type': 'timesince'})
 
     task = tables.Column(get_task_or_status,
                          cell_attributes_getter=get_install_percent,
@@ -740,7 +744,7 @@ class Hosts(tables.DataTable):
                          status_choices=TASK_STATE_CHOICES)
 
     def get_object_id(self, datum):
-        return unicode(datum.id)
+        return str(datum.id)
 
     def get_object_display(self, datum):
         return datum.hostname
@@ -786,10 +790,10 @@ class HostsStorage(Hosts):
         hidden_title = False
 
 
-class HostsCompute(Hosts):
+class HostsWorker(Hosts):
     class Meta(object):
-        name = "hostscompute"
-        verbose_name = _("Compute Hosts")
+        name = "hostsworker"
+        verbose_name = _("Worker Hosts")
         status_columns = ["task"]
         row_class = UpdateRow
         multi_select = True
@@ -799,7 +803,7 @@ class HostsCompute(Hosts):
             PowerOnHost,
             PowerOffHost, RebootHost,
             ResetHost, ReinstallHost, PatchInstallAsync, DeleteHost)
-        table_actions = (HostsComputeFilterAction, LockHost,
+        table_actions = (HostsWorkerFilterAction, LockHost,
                          UnlockHost, PatchInstallAsync)
         hidden_title = False
 
@@ -823,16 +827,16 @@ class DeleteInterfaceProfile(tables.DeleteAction):
     @staticmethod
     def action_present(count):
         return ungettext_lazy(
-            u"Delete Interface Profile",
-            u"Delete Interface Profiles",
+            "Delete Interface Profile",
+            "Delete Interface Profiles",
             count
         )
 
     @staticmethod
     def action_past(count):
         return ungettext_lazy(
-            u"Deleted Interface Profile",
-            u"Deleted Interface Profiles",
+            "Deleted Interface Profile",
+            "Deleted Interface Profiles",
             count
         )
 
@@ -871,7 +875,7 @@ class InterfaceProfilesTable(tables.DataTable):
                                verbose_name=_("Interface Configuration"))
 
     def get_object_id(self, datum):
-        return unicode(datum.uuid)
+        return str(datum.uuid)
 
     def get_object_display(self, datum):
         return datum.profilename
@@ -888,16 +892,16 @@ class DeleteCpuProfile(tables.DeleteAction):
     @staticmethod
     def action_present(count):
         return ungettext_lazy(
-            u"Delete Cpu Profile",
-            u"Delete Cpu Profiles",
+            "Delete Cpu Profile",
+            "Delete Cpu Profiles",
             count
         )
 
     @staticmethod
     def action_past(count):
         return ungettext_lazy(
-            u"Deleted Cpu Profile",
-            u"Deleted Cpu Profiles",
+            "Deleted Cpu Profile",
+            "Deleted Cpu Profiles",
             count
         )
 
@@ -926,7 +930,7 @@ class CpuProfilesTable(tables.DataTable):
                                    verbose_name=_("CPU Assignments"))
 
     def get_object_id(self, datum):
-        return unicode(datum.uuid)
+        return str(datum.uuid)
 
     def get_object_display(self, datum):
         return datum.profilename
@@ -944,16 +948,16 @@ class DeleteDiskProfile(tables.DeleteAction):
     @staticmethod
     def action_present(count):
         return ungettext_lazy(
-            u"Delete Storage Profile",
-            u"Delete Storage Profiles",
+            "Delete Storage Profile",
+            "Delete Storage Profiles",
             count
         )
 
     @staticmethod
     def action_past(count):
         return ungettext_lazy(
-            u"Deleted Storage Profile",
-            u"Deleted Storage Profiles",
+            "Deleted Storage Profile",
+            "Deleted Storage Profiles",
             count
         )
 
@@ -1022,7 +1026,7 @@ class DiskProfilesTable(tables.DataTable):
                         verbose_name=_('Observations'))
 
     def get_object_id(self, datum):
-        return unicode(datum.uuid)
+        return str(datum.uuid)
 
     def get_object_display(self, datum):
         return datum.profilename
@@ -1040,16 +1044,16 @@ class DeleteMemoryProfile(tables.DeleteAction):
     @staticmethod
     def action_present(count):
         return ungettext_lazy(
-            u"Delete Memory Profile",
-            u"Delete Memory Profiles",
+            "Delete Memory Profile",
+            "Delete Memory Profiles",
             count
         )
 
     @staticmethod
     def action_past(count):
         return ungettext_lazy(
-            u"Deleted Memory Profile",
-            u"Deleted Memory Profiles",
+            "Deleted Memory Profile",
+            "Deleted Memory Profiles",
             count
         )
 
@@ -1089,7 +1093,7 @@ class MemoryProfilesTable(tables.DataTable):
                            verbose_name=_("Memory Assignments"))
 
     def get_object_id(self, datum):
-        return unicode(datum.uuid)
+        return str(datum.uuid)
 
     def get_object_display(self, datum):
         return datum.profilename

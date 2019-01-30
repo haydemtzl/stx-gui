@@ -1,6 +1,4 @@
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
-# Copyright (c) 2015-2017 Wind River Systems, Inc.
+# Copyright (c) 2015-2018 Wind River Systems, Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -34,8 +32,7 @@ def get_parameters_name(datum):
 def get_parameters_value(datum):
     if datum is None or datum.value is None:
         return None
-    if datum.key == stx_api.sysinv.LVG_NOVA_PARAM_INSTANCES_SIZE_GIB:
-        value = datum.value
+    value = None
     if datum.key == stx_api.sysinv.LVG_NOVA_PARAM_BACKING:
         value = datum.value
     if datum.key == stx_api.sysinv.LVG_NOVA_PARAM_DISK_OPS:

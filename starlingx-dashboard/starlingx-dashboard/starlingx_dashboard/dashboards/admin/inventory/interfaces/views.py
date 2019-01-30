@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2013-2016 Wind River Systems, Inc.
+# Copyright (c) 2013-2018 Wind River Systems, Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -55,7 +55,8 @@ def get_port_data(request, host_id, interface=None):
             # neighbours
             neighbour_list = \
                 stx_api.sysinv.host_lldpneighbour_list(request, host_id)
-            interface_list = stx_api.sysinv.host_interface_list(request, host_id)
+            interface_list = stx_api.sysinv.host_interface_list(request,
+                                                                host_id)
 
             for p in port_list:
                 port_info = "%s (%s, %s, " % (p.get_port_display_name(),
@@ -184,13 +185,14 @@ class AddInterfaceProfileView(forms.ModalFormView):
             try:
                 host = stx_api.sysinv.host_get(self.request, host_id)
 
-                all_ports = stx_api.sysinv.host_port_list(self.request, host.uuid)
+                all_ports = stx_api.sysinv.host_port_list(self.request,
+                                                          host.uuid)
                 host.ports = [p for p in all_ports if p.interface_uuid]
                 for p in host.ports:
                     p.namedisplay = p.get_port_display_name()
 
-                host.interfaces = stx_api.sysinv.host_interface_list(self.request,
-                                                                     host.uuid)
+                host.interfaces = stx_api.sysinv.host_interface_list(
+                    self.request, host.uuid)
                 for i in host.interfaces:
                     i.ports = [p.get_port_display_name()
                                for p in all_ports if
@@ -258,10 +260,10 @@ class UpdateView(forms.ModalFormView):
 
     def get_initial(self):
         interface = self._get_object()
-        providernetworks = []
-        if interface.providernetworks:
-            for pn in interface.providernetworks.split(","):
-                providernetworks.append(str(pn))
+        datanetworks_csv = []
+        if interface.datanetworks_csv:
+            for pn in interface.datanetworks_csv.split(","):
+                datanetworks_csv.append(str(pn))
         try:
             host = stx_api.sysinv.host_get(self.request, interface.host_id)
         except Exception:
@@ -288,10 +290,10 @@ class UpdateView(forms.ModalFormView):
                 # 'uses': interface.uses,
                 'ifclass': interface.ifclass,
                 'networktype': interface.networktype,
-                'providernetworks_data': providernetworks,
-                'providernetworks_data-external': providernetworks,
-                'providernetworks_pci': providernetworks,
-                'providernetworks_sriov': providernetworks,
+                'datanetworks_csv_data': datanetworks_csv,
+                'datanetworks_csv_data-external': datanetworks_csv,
+                'datanetworks_csv_pci': datanetworks_csv,
+                'datanetworks_csv_sriov': datanetworks_csv,
                 'sriov_numvfs': interface.sriov_numvfs,
                 'imtu': interface.imtu,
                 'ipv4_mode': getattr(interface, 'ipv4_mode', 'disabled'),

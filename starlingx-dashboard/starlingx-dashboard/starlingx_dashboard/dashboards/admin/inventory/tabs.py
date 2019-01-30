@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2013-2017 Wind River Systems, Inc.
+# Copyright (c) 2013-2018 Wind River Systems, Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -41,7 +41,7 @@ LOG = logging.getLogger(__name__)
 class HostsTab(tabs.TableTab):
     table_classes = (toplevel_tables.HostsController,
                      toplevel_tables.HostsStorage,
-                     toplevel_tables.HostsCompute,
+                     toplevel_tables.HostsWorker,
                      toplevel_tables.HostsUnProvisioned,)
     name = _("Hosts")
     slug = "hosts"
@@ -101,7 +101,8 @@ class HostsTab(tabs.TableTab):
         return hosts
 
     def get_hostscontroller_data(self):
-        controllers = self.get_hosts_data(stx_api.sysinv.PERSONALITY_CONTROLLER)
+        controllers = self.get_hosts_data(
+            stx_api.sysinv.PERSONALITY_CONTROLLER)
 
         return controllers
 
@@ -110,10 +111,10 @@ class HostsTab(tabs.TableTab):
 
         return storages
 
-    def get_hostscompute_data(self):
-        computes = self.get_hosts_data(stx_api.sysinv.PERSONALITY_COMPUTE)
+    def get_hostsworker_data(self):
+        workers = self.get_hosts_data(stx_api.sysinv.PERSONALITY_WORKER)
 
-        return computes
+        return workers
 
     def get_hostsunprovisioned_data(self):
         unprovisioned = self.get_hosts_data(stx_api.sysinv.PERSONALITY_UNKNOWN)
@@ -133,12 +134,12 @@ class HostsTab(tabs.TableTab):
 
         controllers = context['hostscontroller_table'].data
         storages = context['hostsstorage_table'].data
-        computes = context['hostscompute_table'].data
+        workers = context['hostsworker_table'].data
         unprovisioned = context['hostsunprovisioned_table'].data
 
         context['controllers'] = controllers
         context['storages'] = storages
-        context['computes'] = computes
+        context['workers'] = workers
         context['unprovisioned'] = unprovisioned
 
         totals = []
@@ -162,7 +163,7 @@ class HostsTab(tabs.TableTab):
             elif h._availability == 'failed':
                 fail_cnt += 1
 
-        for h in computes:
+        for h in workers:
             comp_cnt += 1
             if h._availability == 'degraded':
                 degr_cnt += 1
@@ -182,7 +183,7 @@ class HostsTab(tabs.TableTab):
         if (comp_cnt > 0):
             badge = "badge-success"
             totals.append(
-                {'name': "Compute", 'value': comp_cnt, 'badge': badge})
+                {'name': "Worker", 'value': comp_cnt, 'badge': badge})
 
         if (degr_cnt > 0):
             badge = "badge-warning"
@@ -497,6 +498,8 @@ class StorageTab(tabs.TableTab):
                               redirect=redirect)
 
         context['cinder_backend'] = stx_api.sysinv.get_cinder_backend(request)
+        context['is_system_k8s_aio'] = \
+            stx_api.sysinv.is_system_k8s_aio(request)
 
         return context
 
@@ -528,9 +531,9 @@ class InterfacesTab(tabs.TableTab):
                 i.host_id = host.id
 
                 port_data = \
-                    map(list, zip(*[(p.get_port_display_name(),
-                                     p.neighbours) for p in host.ports if
-                        i.uuid == p.interface_uuid]))
+                    list(map(list, zip(*[(p.get_port_display_name(),
+                                          p.neighbours) for p in host.ports if
+                             i.uuid == p.interface_uuid])))
 
                 if port_data:
                     # Default interface
@@ -543,10 +546,12 @@ class InterfacesTab(tabs.TableTab):
 
                 platform_network_names = []
                 if i.ifclass == 'platform':
-                    for interface_network in stx_api.sysinv.interface_network_list_by_interface(self.request,
-                                                                                                i.uuid):
+                    for interface_network in stx_api.sysinv.\
+                            interface_network_list_by_interface(
+                            self.request, i.uuid):
                         if str(interface_network.network_id) in i.networks:
-                            platform_network_names.append(interface_network.network_name)
+                            platform_network_names.append(
+                                interface_network.network_name)
                 i.platform_network_names = platform_network_names
 
                 if i.iftype == 'ethernet':

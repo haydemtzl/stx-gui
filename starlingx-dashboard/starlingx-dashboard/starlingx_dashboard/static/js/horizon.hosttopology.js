@@ -156,9 +156,9 @@ horizon.host_topology = {
         return;
     }
 
-    // Remove hosts without compute functionality
+    // Remove hosts without worker functionality
     model.hosts = $.grep(model.hosts, function (host, i){
-      if (host.subfunctions && host.subfunctions.indexOf('compute') !== -1){
+      if (host.subfunctions && host.subfunctions.indexOf('worker') !== -1){
         return true;
       }
       return false;
@@ -186,8 +186,8 @@ horizon.host_topology = {
       // 'expand' a single IF connected to many pnets into multiple 'connections'
       $.each(host.interfaces, function(index, interface) {
         var if_connections = []
-        if (interface.providernetworks) {
-          $.each(interface.providernetworks.split(','), function(index, providernet_name) {
+        if (interface.datanetworks_csv) {
+          $.each(interface.datanetworks_csv.split(','), function(index, providernet_name) {
             var connection = {}
             // Attach the interface to the connection
             connection.interface = interface;

@@ -9,7 +9,6 @@ import re
 
 from django.core.urlresolvers import reverse  # noqa
 from django import template
-from django.template import defaultfilters as filters
 from django.utils.translation import string_concat  # noqa
 from django.utils.translation import ugettext_lazy as _
 from django.utils.translation import ungettext_lazy
@@ -34,17 +33,18 @@ class CreateStorageVolume(tables.LinkAction):
         return reverse(self.url, args=(host_id,))
 
     def allowed(self, request, datum):
+        is_system_k8s_aio = sysinv.is_system_k8s_aio(request)
         host = self.table.kwargs['host']
         self.verbose_name = _("Assign Storage Function")
 
         classes = [c for c in self.classes if c != "disabled"]
         self.classes = classes
 
-        if host._personality != 'storage':
+        if host._personality != 'storage' and not is_system_k8s_aio:
             return False
 
         if host._administrative == 'unlocked':
-            if 'storage' in host._subfunctions:
+            if 'storage' in host._subfunctions or is_system_k8s_aio:
                 if "disabled" not in self.classes:
                     self.classes = [c for c in self.classes] + ['disabled']
                     self.verbose_name = string_concat(self.verbose_name, ' ',
@@ -64,7 +64,7 @@ class CreateDiskProfile(tables.LinkAction):
         return reverse(self.url, args=(host_id,))
 
     def allowed(self, request, datum):
-        return True
+        return not sysinv.is_system_mode_simplex(request)
 
 
 class CreatePartition(tables.LinkAction):
@@ -95,16 +95,16 @@ class DeletePartition(tables.DeleteAction):
     @staticmethod
     def action_present(count):
         return ungettext_lazy(
-            u"Delete Partition",
-            u"Delete Partitions",
+            "Delete Partition",
+            "Delete Partitions",
             count
         )
 
     @staticmethod
     def action_past(count):
         return ungettext_lazy(
-            u"Deleted Partition",
-            u"Deleted Partitions",
+            "Deleted Partition",
+            "Deleted Partitions",
             count
         )
 
@@ -251,7 +251,7 @@ class DisksTable(tables.DataTable):
                               verbose_name=('Model'))
 
     def get_object_id(self, datum):
-        return unicode(datum.uuid)
+        return str(datum.uuid)
 
     class Meta(object):
         name = "disks"
@@ -300,16 +300,16 @@ class DeleteStor(tables.DeleteAction):
     @staticmethod
     def action_present(count):
         return ungettext_lazy(
-            u"Delete Journal",
-            u"Delete Journals",
+            "Delete Journal",
+            "Delete Journals",
             count
         )
 
     @staticmethod
     def action_past(count):
         return ungettext_lazy(
-            u"Deleted Journal",
-            u"Deleted Journals",
+            "Deleted Journal",
+            "Deleted Journals",
             count
         )
 
@@ -348,7 +348,7 @@ class StorageVolumesTable(tables.DataTable):
                                      verbose_name=('Journal Location'))
 
     def get_object_id(self, datum):
-        return unicode(datum.uuid)
+        return str(datum.uuid)
 
     class Meta(object):
         name = "storagevolumes"
@@ -378,8 +378,8 @@ class AddLocalVolumeGroup(tables.LinkAction):
         self.classes = classes
 
         if not host._administrative == 'locked':
-            if 'compute' in host._subfunctions and \
-               host.compute_config_required is False:
+            if 'worker' in host._subfunctions and \
+               host.worker_config_required is False:
                 if "disabled" not in self.classes:
                     self.classes = [c for c in self.classes] + ['disabled']
                     self.verbose_name = string_concat(self.verbose_name, ' ',
@@ -396,7 +396,7 @@ class AddLocalVolumeGroup(tables.LinkAction):
         if host._personality == 'controller':
             compatible_lvgs += [sysinv.LVG_CINDER_VOLUMES]
 
-        if 'compute' in host._subfunctions:
+        if 'worker' in host._subfunctions:
             compatible_lvgs += [sysinv.LVG_NOVA_LOCAL]
 
         allowed_lvgs = set(compatible_lvgs) - set(current_lvgs)
@@ -413,16 +413,16 @@ class RemoveLocalVolumeGroup(tables.DeleteAction):
     @staticmethod
     def action_present(count):
         return ungettext_lazy(
-            u"Delete Local Volume Group",
-            u"Delete Local Volume Groups",
+            "Delete Local Volume Group",
+            "Delete Local Volume Groups",
             count
         )
 
     @staticmethod
     def action_past(count):
         return ungettext_lazy(
-            u"Deleted Local Volume Group",
-            u"Deleted Local Volume Groups",
+            "Deleted Local Volume Group",
+            "Deleted Local Volume Groups",
             count
         )
 
@@ -432,8 +432,8 @@ class RemoveLocalVolumeGroup(tables.DeleteAction):
 
         if lvg.lvm_vg_name == sysinv.LVG_NOVA_LOCAL:
             return ((host._administrative == 'locked') or
-                    (('compute' in host._subfunctions) and
-                     (host.compute_config_required is True)))
+                    (('worker' in host._subfunctions) and
+                     (host.worker_config_required is True)))
         elif lvg.lvm_vg_name == sysinv.LVG_CINDER_VOLUMES:
             return (sysinv.CINDER_BACKEND_LVM not in cinder_backend and
                     sysinv.LVG_ADD in lvg.vg_state)
@@ -463,27 +463,29 @@ class LocalVolumeGroupsTable(tables.DataTable):
                           verbose_name=('State'))
     access = tables.Column('lvm_vg_access',
                            verbose_name=('Access'))
-    size = tables.Column('lvm_vg_size',
-                         verbose_name=('Size'),
-                         filters=(filters.filesizeformat,))
+    size = tables.Column('lvm_vg_size_gib',
+                         verbose_name=('Size (GiB)'))
+    avail_size = tables.Column('lvm_vg_avail_size_gib',
+                               verbose_name=('Avail Size (GiB)'))
     pvs = tables.Column('lvm_cur_pv',
                         verbose_name=('Current Physical Volumes'))
     lvs = tables.Column('lvm_cur_lv',
                         verbose_name=('Current Logical Volumes'))
 
     def get_object_id(self, datum):
-        return unicode(datum.uuid)
+        return str(datum.uuid)
 
     def get_object_display(self, datum):
         msg = datum.uuid
         if datum.lvm_vg_name:
             msg += " (%s)" % datum.lvm_vg_name
-        return unicode(msg)
+        return str(msg)
 
     class Meta(object):
         name = "localvolumegroups"
         verbose_name = ("Local Volume Groups")
-        columns = ('name', 'state', 'access', 'size', 'pvs', 'lvs',)
+        columns = ('name', 'state', 'access', 'size', 'avail_size',
+                   'pvs', 'lvs',)
         multi_select = False
         row_actions = (RemoveLocalVolumeGroup,)
         table_actions = (AddLocalVolumeGroup, CreateDiskProfile)
@@ -510,11 +512,11 @@ class AddPhysicalVolume(tables.LinkAction):
         if host._personality == sysinv.PERSONALITY_CONTROLLER:
             return True
 
-        # nova-local: Allow adding to any locked host with a compute
+        # nova-local: Allow adding to any locked host with a worker
         # subfunction. On an AIO, the previous check superceeds this.
         if host._administrative != 'locked':
-            if 'compute' in host._subfunctions and \
-               host.compute_config_required is False:
+            if 'worker' in host._subfunctions and \
+               host.worker_config_required is False:
                 if "disabled" not in self.classes:
                     self.classes = [c for c in self.classes] + ['disabled']
                     self.verbose_name = string_concat(self.verbose_name, ' ',
@@ -534,16 +536,16 @@ class RemovePhysicalVolume(tables.DeleteAction):
     @staticmethod
     def action_present(count):
         return ungettext_lazy(
-            u"Delete Physical Volume",
-            u"Delete Physical Volumes",
+            "Delete Physical Volume",
+            "Delete Physical Volumes",
             count
         )
 
     @staticmethod
     def action_past(count):
         return ungettext_lazy(
-            u"Deleted Physical Volume",
-            u"Deleted Physical Volumes",
+            "Deleted Physical Volume",
+            "Deleted Physical Volumes",
             count
         )
 
@@ -553,8 +555,8 @@ class RemovePhysicalVolume(tables.DeleteAction):
 
         if pv.lvm_vg_name == sysinv.LVG_NOVA_LOCAL:
             return ((host._administrative == 'locked') or
-                    (('compute' in host._subfunctions) and
-                     (host.compute_config_required is True)))
+                    (('worker' in host._subfunctions) and
+                     (host.worker_config_required is True)))
         elif pv.lvm_vg_name == sysinv.LVG_CINDER_VOLUMES:
             return (sysinv.CINDER_BACKEND_LVM not in cinder_backend and
                     sysinv.PV_ADD in pv.pv_state)
@@ -591,13 +593,13 @@ class PhysicalVolumesTable(tables.DataTable):
                                 verbose_name=('LVM Volume Group Name'))
 
     def get_object_id(self, datum):
-        return unicode(datum.uuid)
+        return str(datum.uuid)
 
     def get_object_display(self, datum):
         msg = datum.uuid
         if datum.lvm_pv_name:
             msg += " (%s)" % datum.lvm_pv_name
-        return unicode(msg)
+        return str(msg)
 
     class Meta(object):
         name = "physicalvolumes"
@@ -627,13 +629,13 @@ class PartitionsTable(tables.DataTable):
                            verbose_name=('Status'))
 
     def get_object_id(self, datum):
-        return unicode(datum.uuid)
+        return str(datum.uuid)
 
     def get_object_display(self, datum):
         msg = datum.uuid
         if datum.device_path:
             msg += " (%s)" % datum.device_path
-        return unicode(msg)
+        return str(msg)
 
     class Meta(object):
         name = "partitions"

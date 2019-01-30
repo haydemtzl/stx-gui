@@ -32,16 +32,16 @@ class DeleteAddress(tables.DeleteAction):
     @staticmethod
     def action_present(count):
         return ungettext_lazy(
-            u"Delete Address",
-            u"Delete Addresses",
+            "Delete Address",
+            "Delete Addresses",
             count
         )
 
     @staticmethod
     def action_past(count):
         return ungettext_lazy(
-            u"Deleted Address",
-            u"Deleted Addresses",
+            "Deleted Address",
+            "Deleted Addresses",
             count
         )
 
@@ -76,8 +76,8 @@ class CreateAddress(tables.LinkAction):
             return False
 
         if interface.ifclass == 'platform':
-            interface_networks = stx_api.sysinv.interface_network_list_by_interface(request,
-                                                                                    interface.uuid)
+            interface_networks = stx_api.sysinv.\
+                interface_network_list_by_interface(request, interface.uuid)
             for interface_network in interface_networks:
                 if interface_network.network_type in ALLOWED_INTERFACE_TYPES:
                     return True
@@ -103,7 +103,7 @@ class AddressTable(tables.DataTable):
                                verbose_name=_("DAD"))
 
     def get_object_id(self, datum):
-        return unicode(datum.uuid)
+        return str(datum.uuid)
 
     def get_object_display(self, datum):
         return ("%(address)s/%(prefix)s" %

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2016 Wind River Systems, Inc.
+# Copyright (c) 2016-2019 Wind River Systems, Inc.
 #
 # SPDX-License-Identifier: Apache-2.0
 #
@@ -14,7 +14,7 @@ from openstack_dashboard.dashboards.admin import dashboard
 
 
 class HostTopology(horizon.Panel):
-    name = _("Provider Network Topology")
+    name = _("Data Network Topology")
     slug = 'host_topology'
     permissions = ('openstack.services.platform', 'openstack.services.network')
 
@@ -33,5 +33,6 @@ class HostTopology(horizon.Panel):
             return False
         else:
             return True
+
 
 dashboard.Admin.register(HostTopology)

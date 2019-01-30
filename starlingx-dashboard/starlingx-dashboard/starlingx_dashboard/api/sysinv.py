@@ -10,7 +10,7 @@
 #  License for the specific language governing permissions and limitations
 #  under the License.
 #
-# Copyright (c) 2013-2018 Wind River Systems, Inc.
+# Copyright (c) 2013-2019 Wind River Systems, Inc.
 #
 
 from __future__ import absolute_import
@@ -23,10 +23,10 @@ from cgtsclient.v1 import client as cgts_client
 from cgtsclient.v1 import icpu as icpu_utils
 
 from django.conf import settings
+from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 
 from openstack_dashboard.api import base
-from starlingx_dashboard.api import base as stx_base
 
 import cgcs_patch.constants as patch_constants
 import sysinv.common.constants as constants
@@ -35,12 +35,12 @@ SYSTEM_TYPE_STANDARD = constants.TIS_STD_BUILD
 SYSTEM_TYPE_AIO = constants.TIS_AIO_BUILD
 
 PERSONALITY_CONTROLLER = 'controller'
-PERSONALITY_COMPUTE = 'compute'
+PERSONALITY_WORKER = 'worker'
 PERSONALITY_NETWORK = 'network'
 PERSONALITY_STORAGE = 'storage'
 PERSONALITY_UNKNOWN = 'unknown'
 
-SUBFUNCTIONS_COMPUTE = 'compute'
+SUBFUNCTIONS_WORKER = 'worker'
 SUBFUNCTIONS_LOWLATENCY = 'lowlatency'
 
 BM_TYPE_NULL = ''
@@ -82,10 +82,7 @@ PV_DEL = 'removing'
 
 # Storage: Volume Group Parameter Types
 LVG_NOVA_PARAM_BACKING = 'instance_backing'
-LVG_NOVA_PARAM_INSTANCES_SIZE_MIB = 'instances_lv_size_mib'
-LVG_NOVA_PARAM_INSTANCES_SIZE_GIB = 'instances_lv_size_gib'
 LVG_NOVA_PARAM_DISK_OPS = 'concurrent_disk_operations'
-LVG_NOVA_BACKING_LVM = 'lvm'
 LVG_NOVA_BACKING_IMAGE = 'image'
 LVG_NOVA_BACKING_REMOTE = 'remote'
 LVG_CINDER_PARAM_LVM_TYPE = 'lvm_type'
@@ -157,6 +154,9 @@ class Memory(base.APIResourceWrapper):
               'vm_hugepages_possible_2M',
               'vm_hugepages_possible_1G',
               'vm_hugepages_use_1G',
+              'vswitch_hugepages_reqd',
+              'vswitch_hugepages_size_mib',
+              'vswitch_hugepages_nr',
               'uuid', 'ihost_uuid', 'inode_uuid',
               'minimum_platform_reserved_mib']
 
@@ -398,6 +398,7 @@ class LocalVolumeGroup(base.APIResourceWrapper):
               'lvm_max_pv',
               'lvm_cur_pv',
               'lvm_vg_size',
+              'lvm_vg_avail_size',
               'lvm_vg_total_pe',
               'lvm_vg_free_pe',
               'created_at',
@@ -405,6 +406,16 @@ class LocalVolumeGroup(base.APIResourceWrapper):
 
     def __init__(self, apiresource):
         super(LocalVolumeGroup, self).__init__(apiresource)
+
+    @property
+    def lvm_vg_size_gib(self):
+        return math.floor(float(
+            self.lvm_vg_size) / (1024 ** 3) * 1000) / 1000.0
+
+    @property
+    def lvm_vg_avail_size_gib(self):
+        return math.floor(float(
+            self.lvm_vg_avail_size) / (1024 ** 3) * 1000) / 1000.0
 
 
 class LocalVolumeGroupParam(object):
@@ -449,12 +460,6 @@ def host_lvg_get_params(request, lvg_id, raw=False, lvg=None):
     if lvg is None:
         lvg = cgtsclient(request).ilvg.get(lvg_id)
     params = lvg.capabilities
-
-    lv_size_mib = params.pop(LVG_NOVA_PARAM_INSTANCES_SIZE_MIB, None)
-    if lv_size_mib:
-        lv_size_gib = float(lv_size_mib) / 1024
-        params.update({LVG_NOVA_PARAM_INSTANCES_SIZE_GIB: lv_size_gib})
-
     if raw:
         return params
     return [LocalVolumeGroupParam(lvg_id, key, value) for
@@ -812,7 +817,7 @@ class Host(base.APIResourceWrapper):
 
     PERSONALITY_DISPLAY_CHOICES = (
         (PERSONALITY_CONTROLLER, _("Controller")),
-        (PERSONALITY_COMPUTE, _("Compute")),
+        (PERSONALITY_WORKER, _("Worker")),
         (PERSONALITY_NETWORK, _("Network")),
         (PERSONALITY_STORAGE, _("Storage")),
     )
@@ -905,7 +910,7 @@ class Host(base.APIResourceWrapper):
     def is_cpe(self):
         subfunctions = self._subfunctions.split(',')
         if PERSONALITY_CONTROLLER in subfunctions and \
-                PERSONALITY_COMPUTE in subfunctions:
+                PERSONALITY_WORKER in subfunctions:
             return True
         else:
             return False
@@ -925,8 +930,8 @@ class Host(base.APIResourceWrapper):
                                        self._subfunction_avail)
 
     @property
-    def compute_config_required(self):
-        return self.config_status == 'Compute config required'
+    def worker_config_required(self):
+        return self.config_status == 'Worker config required'
 
     @property
     def location(self):
@@ -948,7 +953,7 @@ class Host(base.APIResourceWrapper):
 
     @property
     def boottime(self):
-        return datetime.datetime.now() - datetime.timedelta(
+        return timezone.now() - datetime.timedelta(
             seconds=self.uptime)
 
     @property
@@ -1410,9 +1415,9 @@ class StorageTier(base.APIResourceWrapper):
 class StorageCeph(base.APIResourceWrapper):
     """..."""
 
-    _attrs = ['cinder_pool_gib', 'glance_pool_gib', 'ephemeral_pool_gib',
-              'object_pool_gib', 'object_gateway', 'uuid', 'tier_name', 'link',
-              'ceph_total_space_gib']
+    _attrs = ['cinder_pool_gib', 'kube_pool_gib', 'glance_pool_gib',
+              'ephemeral_pool_gib', 'object_pool_gib', 'object_gateway',
+              'uuid', 'tier_name', 'link', 'ceph_total_space_gib']
 
     def __init__(self, apiresource):
         super(StorageCeph, self).__init__(apiresource)
@@ -1420,6 +1425,7 @@ class StorageCeph(base.APIResourceWrapper):
         if hasattr(self, 'uuid'):
             self._tier_name = self.tier_name
             self._cinder_pool_gib = self.cinder_pool_gib
+            self._kube_pool_gib = self.kube_pool_gib
             self._glance_pool_gib = self.glance_pool_gib
             self._ephemeral_pool_gib = self.ephemeral_pool_gib
             self._object_pool_gib = self.object_pool_gib
@@ -1428,6 +1434,7 @@ class StorageCeph(base.APIResourceWrapper):
         else:
             self._tier_name = None
             self._cinder_pool_gib = None
+            self._kube_pool_gib = None
             self._glance_pool_gib = None
             self._ephemeral_pool_gib = None
             self._object_pool_gib = None
@@ -1441,6 +1448,10 @@ class StorageCeph(base.APIResourceWrapper):
     @property
     def cinder_pool_gib(self):
         return self._cinder_pool_gib
+
+    @property
+    def kube_pool_gib(self):
+        return self._kube_pool_gib
 
     @property
     def glance_pool_gib(self):
@@ -1737,7 +1748,7 @@ def controllerfs_list(request):
     controllerfs = cgtsclient(request).controller_fs.list()
     ceph_mon_list = cgtsclient(request).ceph_mon.list()
 
-    if ceph_mon_list and not is_system_mode_simplex(request):
+    if ceph_mon_list and not is_system_k8s_aio(request):
         controllerfs.append(ceph_mon_list[0])
 
     return [ControllerFS(n) for n in controllerfs]
@@ -1924,7 +1935,7 @@ class Interface(base.APIResourceWrapper):
 
     _attrs = ['id', 'uuid', 'ifname', 'ifclass', 'iftype', 'imtu', 'imac',
               'networktype', 'networks', 'aemode', 'txhashpolicy', 'vlan_id',
-              'uses', 'used_by', 'ihost_uuid', 'providernetworks',
+              'uses', 'used_by', 'ihost_uuid', 'datanetworks',
               'ipv4_mode', 'ipv6_mode', 'ipv4_pool', 'ipv6_pool',
               'sriov_numvfs']
 
@@ -1932,6 +1943,10 @@ class Interface(base.APIResourceWrapper):
         super(Interface, self).__init__(apiresource)
         if not self.ifname:
             self.ifname = '(' + str(self.uuid)[-8:] + ')'
+
+    @property
+    def datanetworks_csv(self):
+        return ",".join(self.datanetworks)
 
 
 def host_interface_list(request, host_id):
@@ -2005,12 +2020,14 @@ class InterfaceNetwork(base.APIResourceWrapper):
 
 
 def interface_network_list_by_host(request, host_uuid):
-    interface_networks = cgtsclient(request).interface_network.list_by_host(host_uuid)
+    interface_networks = cgtsclient(request).interface_network.list_by_host(
+        host_uuid)
     return [InterfaceNetwork(n) for n in interface_networks]
 
 
 def interface_network_list_by_interface(request, interface_uuid):
-    interface_networks = cgtsclient(request).interface_network.list_by_interface(interface_uuid)
+    interface_networks = cgtsclient(request).interface_network.\
+        list_by_interface(interface_uuid)
     return [InterfaceNetwork(n) for n in interface_networks]
 
 
@@ -2543,3 +2560,86 @@ def get_system_type(request):
     systems = system_list(request)
     system_type = systems[0].to_dict().get('system_type')
     return system_type
+
+
+def is_kubernetes_config(request):
+    systems = system_list(request)
+    system_capabilities = systems[0].to_dict().get('capabilities')
+    if system_capabilities.get('kubernetes_enabled', False):
+        return True
+    return False
+
+
+def is_system_k8s_aio(request):
+    system_type = get_system_type(request)
+
+    if (system_type == SYSTEM_TYPE_AIO and
+            is_kubernetes_config(request)):
+        return True
+    return False
+
+
+def is_host_with_storage(request, host_id):
+    host = host_get(request, host_id)
+    return 'storage' in host.subfunctions or is_system_k8s_aio(request)
+
+
+class DataNetwork(base.APIResourceWrapper):
+    """..."""
+
+    _attrs = ['id', 'uuid', 'network_type', 'name', 'mtu', 'description',
+              'multicast_group', 'port_num', 'ttl', 'mode']
+
+    def __init__(self, apiresource):
+        super(DataNetwork, self).__init__(apiresource)
+
+
+DATANETWORK_TYPE_FLAT = "flat"
+DATANETWORK_TYPE_VLAN = "vlan"
+DATANETWORK_TYPE_VXLAN = "vxlan"
+
+data_network_type_choices_list = [
+    (DATANETWORK_TYPE_FLAT, DATANETWORK_TYPE_FLAT),
+    (DATANETWORK_TYPE_VLAN, DATANETWORK_TYPE_VLAN),
+    (DATANETWORK_TYPE_VXLAN, DATANETWORK_TYPE_VXLAN),
+]
+
+
+def data_network_type_choices():
+    return data_network_type_choices_list
+
+
+def data_network_create(request, **kwargs):
+    LOG.info("data_network_create(): kwargs=%s", kwargs)
+    datanet = cgtsclient(request).datanetwork.create(**kwargs)
+    return DataNetwork(datanet)
+
+
+def data_network_list(request):
+    datanets = cgtsclient(request).datanetwork.list()
+    return [DataNetwork(n) for n in datanets]
+
+
+def data_network_get(request, datanet_id):
+    datanet = cgtsclient(request).datanetwork.get(datanet_id)
+    if not datanet:
+        raise ValueError('No match found for datanet_id "%s".' % datanet_id)
+    return DataNetwork(datanet)
+
+
+def data_network_modify(request, datanet_id, **kwargs):
+    LOG.info("data_network_modify(): datanet_id,=%s, kwargs=%s",
+             datanet_id, kwargs)
+    patch = []
+    for key, value in kwargs.items():
+        patch.append(dict(path='/' + key, value=value, op='replace'))
+
+    datanet = cgtsclient(request).datanetwork.update(datanet_id, patch)
+    if not datanet:
+        raise ValueError('No match found for datanet_id "%s".' % datanet_id)
+    return DataNetwork(datanet)
+
+
+def data_network_delete(request, datanet_id):
+    LOG.info("data_network_delete(): datanet_id=%s", datanet_id)
+    return cgtsclient(request).datanetwork.delete(datanet_id)
